@@ -1,0 +1,7 @@
+name: BuildingGame
+version: 1.0.0
+authors:
+  - Balduvian
+load: STARTUP
+main: BuildingGamePlugin
+api-version: 1.17
