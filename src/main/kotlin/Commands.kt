@@ -11,6 +11,7 @@ import org.bukkit.*
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import round.*
+import java.util.*
 
 @CommandAlias("bg")
 class Commands : BaseCommand() {
@@ -50,13 +51,17 @@ class Commands : BaseCommand() {
 
 			val game = GameRunner.ongoing
 			if (game == null) {
-				errorMessage(sender, "The game is not going")
+				errorMessage(player, "The game is not going")
 				return null
+			}
+
+			if (!game.gamePlayers.contains(player.uniqueId)) {
+				errorMessage(player, "You must be playing the game to use this command")
 			}
 
 			val round = game.currentRound() as? T
 			if (round == null) {
-				errorMessage(sender, "You can't use this command this round")
+				errorMessage(player, "You can't use this command this round")
 				return null
 			}
 
@@ -184,8 +189,39 @@ class Commands : BaseCommand() {
 		}
 	}
 
-	@Subcommand("forceEnd")
+	@CommandAlias("vote")
 	@CommandCompletion("@gamePlayer")
+	fun voteCommand(sender: CommandSender, votePlayer: OfflinePlayer) {
+		val (player, round) = roundFilter<VoteRound>(sender) ?: return
+
+		val voteUUID = votePlayer.uniqueId
+
+		if (round.game.gamePlayers.contains(voteUUID)) {
+			round.votes[player.uniqueId] = voteUUID
+			Teams.updatePlayer(player)
+
+			/* create the reveal order once everyone has voted */
+			if (round.votes.size == round.game.numPlayers()) {
+				val imposter = (round.game.previousRound() as ImposterRound).imposter
+
+				/* don't include imposter yet */
+				val voteCounts = round.votes
+					.filter { (player, _) -> player != imposter }
+					.map { (player, _) -> Pair(player, round.votes.filterValues { it == player }.size) }
+					.sortedBy { (_, count) -> count } as MutableList<Pair<UUID, Int>>
+
+				/* place imposter last */
+				voteCounts.add(Pair(imposter, round.votes.filterValues { it == imposter }.size))
+
+				round.revealOrder.addAll(voteCounts)
+			}
+
+		} else {
+			errorMessage(player, "That player isn't playing")
+		}
+	}
+
+	@Subcommand("forceEnd")
 	fun forceEndCommand(sender: CommandSender) {
 		val (player, round) = roundFilter<Round>(sender, true) ?: return
 
@@ -198,9 +234,14 @@ class Commands : BaseCommand() {
 					}
 				}
 			}
-			is BuildRound -> {
+			is AbstractBuildRound -> {
 				round.game.gamePlayers.forEach { uuid ->
 					if (!round.donePlayers.contains(uuid)) round.donePlayers.add(uuid)
+				}
+			}
+			is VoteRound -> {
+				round.game.gamePlayers.forEach { uuid ->
+					round.votes.putIfAbsent(uuid, round.game.imposterPositions[0])
 				}
 			}
 			else -> errorMessage(player, "Force is not available for this round")

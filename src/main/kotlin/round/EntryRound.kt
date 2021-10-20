@@ -18,7 +18,7 @@ class EntryRound(game: Game) : AbstractTextRound(game) {
 				holdingSize,
 				holdingSize / 2,
 				holdingSize / 2,
-				emptyArray()
+				null
 			)
 		}
 	}
@@ -44,15 +44,11 @@ class EntryRound(game: Game) : AbstractTextRound(game) {
 	}
 
 	override fun reminderText(uuid: UUID, reminderIndex: Int): String {
-		return if (reminderIndex % 2 == 0) {
-			if (submittedPlayers.contains(uuid)) {
-				"Submitted prompt: ${prompts[game.playersRoom(uuid)]}"
+		return if (submittedPlayers.contains(uuid)) {
+			"Submitted prompt: ${prompts[game.playersRoom(uuid)]}"
 
-			} else {
-				"Use /prompt [prompt] to submit"
-			}
 		} else {
-			"Pick a prompt which will likely be guessed partially, not completely"
+			"Use /prompt [prompt] to submit"
 		}
 	}
 

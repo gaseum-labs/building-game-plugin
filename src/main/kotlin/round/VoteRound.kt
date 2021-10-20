@@ -18,6 +18,9 @@ import kotlin.properties.Delegates
 class VoteRound(game: Game) : Round(game) {
 	val votes = HashMap<UUID, UUID>()
 
+	/* set after all votes are cast */
+	val revealOrder = ArrayList<Pair<UUID, Int>>()
+
 	override fun postRoomsBuild() {
 		val rooms = game.currentRooms()
 
@@ -67,8 +70,21 @@ class VoteRound(game: Game) : Round(game) {
 		}
 	}
 
+	/* tour order will switch to row first for the imposter rounds */
+	/* it will also go in vote order, but always showing imposter last */
 	override fun tourText(tourData: TourData): Pair<String, String> {
-		//TODO not implemented
-		return Pair("", "")
+		val builder = game.imposterPositions[tourData.col]
+		val builderName = Bukkit.getOfflinePlayer(builder).name ?: "Unknown"
+		val numVotes = votes.filterValues { it == builder }.size
+
+		return if (builder == (game.rounds[tourData.row - 1] as ImposterRound).imposter) {
+			Pair("$builderName was the imposter!", if (numVotes.toFloat() < game.numPlayers() / 2.0f) {
+				"${ChatColor.GREEN}Safe with $numVotes votes"
+			} else {
+				"${ChatColor.RED}Voted out with $numVotes votes!"
+			})
+		} else {
+			Pair("$builderName was innocent!", "Received $numVotes votes")
+		}
 	}
 }
