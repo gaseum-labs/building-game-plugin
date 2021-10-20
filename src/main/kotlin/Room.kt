@@ -10,7 +10,7 @@ class Room (
 	val depth: Int,
 	val spawnX: Int,
 	val spawnZ: Int,
-	val areas: Array<Area>,
+	val area: Area?,
 ) {
 	data class Area (val x: Int, val z: Int, val width: Int, val depth: Int)
 
@@ -22,6 +22,22 @@ class Room (
 		val FLOOR_BLOCK = Material.BROWN_TERRACOTTA
 		val AREA_BLOCK = Material.SNOW_BLOCK
 		val WALL_BLOCK = Material.GRAY_TERRACOTTA
+
+		fun copyArea(world: World, fromRoom: Room, toRoom: Room) {
+			val (aX0, aZ0, aW, aD) = fromRoom.area ?: return
+			val (aX1, aZ1, _, _) = toRoom.area ?: return
+
+			for (i in 0 until aW) {
+				for (k in 0 until aD) {
+					for (j in FLOOR_Y - FLOOR_DESCEND until FLOOR_Y + WALL_HEIGHT) {
+						val fromBlock = world.getBlockAt(aX0 + i, j, aZ0 + k)
+						val toBlock = world.getBlockAt(aX1 + i, j, aZ1 + k)
+
+						toBlock.setBlockData(fromBlock.blockData, false)
+					}
+				}
+			}
+		}
 	}
 
 	fun spawnLocation(world: World): Location {
@@ -35,6 +51,24 @@ class Room (
 		return Location(world, tpX, FLOOR_Y + 1.0, tpZ, 0.0f, angle)
 	}
 
+	/* the wall in which x is negative */
+	fun destroyLeftWall(world: World) {
+		for (k in z + 1 until z + depth - 1) {
+			for (j in FLOOR_Y + 1 until FLOOR_Y + WALL_HEIGHT) {
+				world.getBlockAt(x, j, k)
+			}
+		}
+	}
+
+	/* the wall in which x is positive */
+	fun destroyRightWall(world: World) {
+		for (k in z + 1 until z + depth - 1) {
+			for (j in FLOOR_Y + 1 until FLOOR_Y + WALL_HEIGHT) {
+				world.getBlockAt(x + width - 1, j, k)
+			}
+		}
+	}
+
 	fun build(world: World) {
 		/* floor */
 		for (i in x until x + width) {
@@ -45,8 +79,9 @@ class Room (
 			}
 		}
 
-		/* areas */
-		areas.forEach { (aX, aZ, aW, aD) ->
+		/* area */
+		if (area != null) {
+			val (aX, aZ, aW, aD) = area
 			for (i in x + aX until x + aX + aW) {
 				for (k in z + aZ until z + aZ + aD) {
 					world.getBlockAt(i, FLOOR_Y, k).setType(AREA_BLOCK, false)

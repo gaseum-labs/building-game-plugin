@@ -7,6 +7,7 @@ abstract class Round(val game: Game) {
 	abstract fun getTime(): Int?
 	abstract fun isPlayerReady(uuid: UUID): Boolean
 	abstract fun doRoomTeleport(): Boolean
+	abstract fun postRoomsBuild()
 
 	/* display */
 	abstract fun splashText(uuid: UUID): Pair<String, String>?

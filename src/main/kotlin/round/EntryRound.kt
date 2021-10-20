@@ -31,6 +31,8 @@ class EntryRound(game: Game) : AbstractTextRound(game) {
 
 	override fun doRoomTeleport() = true
 
+	override fun postRoomsBuild() {}
+
 	/* display */
 
 	override fun splashText(uuid: UUID): Pair<String, String> {

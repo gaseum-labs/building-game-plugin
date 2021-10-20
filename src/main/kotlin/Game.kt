@@ -23,7 +23,10 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 
 	var nextZ = 0
 
+	val imposterPositions = gamePlayers.shuffled()
+
 	fun roundIndex() = rounds.lastIndex
+	fun imposterRoundIndex() = rounds.lastIndex - 3
 	fun numPlayers() = gamePlayers.size
 
 	fun playerInGame(uuid: UUID): Boolean {
@@ -88,6 +91,8 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 			/* mark as having no rooms of its own, relies on previous rooms */
 			rooms.add(null)
 		}
+
+		newRound.postRoomsBuild()
 
 		/* teleport players to the next round */
 		gamePlayers.mapNotNull { Bukkit.getPlayer(it) }.forEach { player ->

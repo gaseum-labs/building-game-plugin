@@ -42,15 +42,15 @@ class TourRound(game: Game) : Round(game) {
 		}
 	}
 
-	init {
-		startTour(tourAlong)
-	}
-
 	override fun isPlayerReady(uuid: UUID): Boolean {
 		return false
 	}
 
 	override fun doRoomTeleport() = false
+
+	override fun postRoomsBuild() {
+		startTour(tourAlong)
+	}
 
 	/* display */
 
