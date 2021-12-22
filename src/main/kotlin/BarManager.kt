@@ -1,16 +1,24 @@
-import net.minecraft.network.chat.ChatComponentText
-import net.minecraft.network.protocol.game.PacketPlayOutBoss
-import net.minecraft.world.BossBattle
-import org.bukkit.craftbukkit.v1_17_R1.entity.CraftPlayer
+import net.minecraft.network.chat.Component
+import net.minecraft.network.chat.TextComponent
+import net.minecraft.network.protocol.game.ClientboundBossEventPacket
+import net.minecraft.world.BossEvent
+import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer
 import org.bukkit.entity.Player
+import java.util.*
 
 object BarManager {
+	class CustomBossEvent(uuid: UUID, name: Component, color: BossBarColor, style: BossBarOverlay)
+		: BossEvent(uuid, name, color, style)
+
 	fun addBossBar(player: Player) {
-		(player as CraftPlayer).handle.b.sendPacket(
-			PacketPlayOutBoss.createAddPacket(
-				object : BossBattle(
-					player.uniqueId, ChatComponentText(""), BarColor.a, BarStyle.a
-				) {}
+		(player as CraftPlayer).handle.connection.send(
+			ClientboundBossEventPacket.createAddPacket(
+				CustomBossEvent(
+					player.uniqueId,
+					TextComponent(""),
+					BossEvent.BossBarColor.WHITE,
+					BossEvent.BossBarOverlay.PROGRESS
+				)
 			)
 		)
 	}
@@ -19,18 +27,20 @@ object BarManager {
 		player: Player,
 		name: String,
 		progress: Float,
-		barColor: BossBattle.BarColor,
+		barColor: BossEvent.BossBarColor,
 	) {
-		player as CraftPlayer
-
-		val bossBar = object : BossBattle(
-			player.uniqueId, ChatComponentText(name),
-			barColor, BarStyle.a
-		) {}
+		val bossBar = CustomBossEvent(
+			player.uniqueId,
+			TextComponent(name),
+			barColor,
+			BossEvent.BossBarOverlay.PROGRESS
+		)
 		bossBar.progress = progress
 
-		player.handle.b.sendPacket(PacketPlayOutBoss.createUpdateNamePacket(bossBar))
-		player.handle.b.sendPacket(PacketPlayOutBoss.createUpdateProgressPacket(bossBar))
-		player.handle.b.sendPacket(PacketPlayOutBoss.createUpdateStylePacket(bossBar))
+		val connection = (player as CraftPlayer).handle.connection
+
+		connection.send(ClientboundBossEventPacket.createUpdateNamePacket(bossBar))
+		connection.send(ClientboundBossEventPacket.createUpdateProgressPacket(bossBar))
+		// connection.send(ClientboundBossEventPacket.createUpdateStylePacket(bossBar))
 	}
 }

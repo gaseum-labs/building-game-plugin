@@ -4,4 +4,4 @@ authors:
   - Balduvian
 load: STARTUP
 main: BuildingGamePlugin
-api-version: 1.17
+api-version: 1.18

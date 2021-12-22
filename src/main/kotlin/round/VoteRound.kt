@@ -3,17 +3,10 @@ package round
 import Game
 import Room
 import Round
-import co.aikar.commands.BaseCommand
-import co.aikar.commands.annotation.CommandAlias
-import com.sun.jna.platform.win32.WinDef
-import it.unimi.dsi.fastutil.Hash
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
-import org.bukkit.command.CommandSender
-import org.bukkit.craftbukkit.libs.org.eclipse.aether.impl.RepositoryEventDispatcher
 import java.util.*
 import kotlin.collections.HashMap
-import kotlin.properties.Delegates
 
 class VoteRound(game: Game) : Round(game) {
 	val votes = HashMap<UUID, UUID>()

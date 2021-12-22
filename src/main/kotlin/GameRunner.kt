@@ -1,5 +1,5 @@
 import net.kyori.adventure.text.Component
-import net.minecraft.world.BossBattle
+import net.minecraft.world.BossEvent
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
@@ -30,7 +30,7 @@ object GameRunner {
 	fun startGame(): String? {
 		if (ongoing != null) return "Game is already running"
 
-		val gamePlayers = PlayerData.list.filter { (uuid, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
+		val gamePlayers = PlayerData.list.filter { (_, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
 
 		if (gamePlayers.size <= 1) return "Need at least two players to start"
 
@@ -80,7 +80,7 @@ object GameRunner {
 		val game = ongoing
 
 		if (game == null) {
-			BarManager.updateBossBar(player, "Building Game", 1.0f, BossBattle.BarColor.g)
+			BarManager.updateBossBar(player, "Building Game", 1.0f, BossEvent.BossBarColor.WHITE)
 
 			val playerData = PlayerData.get(player.uniqueId)
 
@@ -102,7 +102,7 @@ object GameRunner {
 				player,
 				"$AQUA$BOLD${name} $BLUE${outOf}: $BOLD${count}$BLUE / $BOLD$total" + timeString,
 				if (timer != null) timer / game.time.toFloat() else count / total.toFloat(),
-				BossBattle.BarColor.b
+				BossEvent.BossBarColor.BLUE
 			)
 
 			if (game.playerInGame(player.uniqueId)) {

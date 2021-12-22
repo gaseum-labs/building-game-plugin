@@ -19,13 +19,11 @@ abstract class AbstractBuildRound(game: Game) : Round(game) {
 				roomSize,
 				roomSize / 2,
 				(roomSize - buildSize) / 4,
-				arrayOf(
-					Room.Area(
-						(roomSize - buildSize) / 2,
-						(roomSize - buildSize) / 2,
-						buildSize,
-						buildSize
-					)
+				Room.Area(
+					(roomSize - buildSize) / 2,
+					(roomSize - buildSize) / 2,
+					buildSize,
+					buildSize
 				)
 			)
 		}
