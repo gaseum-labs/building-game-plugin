@@ -38,5 +38,3 @@ dependencies {
     implementation 'co.aikar:acf-paper:0.5.0-SNAPSHOT'
     compileOnly 'io.papermc.paper:paper-api:1.18.1-R0.1-SNAPSHOT'
 }
-
-build.dependsOn shadowJar
