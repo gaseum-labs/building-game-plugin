@@ -1,9 +1,16 @@
+package game
+
+import BarManager
+import BuildingGamePlugin
+import PlayerData
+import Teams
+import Util
+import WorldManager
 import net.kyori.adventure.text.Component
 import net.minecraft.world.BossEvent
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
-import round.EntryRound
 
 object GameRunner {
 	var pregameSetup: Setup = Setup()
@@ -19,7 +26,7 @@ object GameRunner {
 				checkRoundComplete()
 
 				Bukkit.getOnlinePlayers().forEach { player ->
-					updateBossBarAndHotbar(player, currentTick)
+					updateBossBarAndHotbar(player)
 				}
 			}
 
@@ -27,17 +34,19 @@ object GameRunner {
 		}, 0, 1)
 	}
 
-	fun startGame(): String? {
-		if (ongoing != null) return "Game is already running"
+	fun startGame(type: GameType): String? {
+		if (ongoing != null) return "game.Game is already running"
 
 		val gamePlayers = PlayerData.list.filter { (_, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
 
-		if (gamePlayers.size <= 1) return "Need at least two players to start"
+		val requiredPlayers = if (pregameSetup.imposter) 4 else 2
+		if (gamePlayers.size < requiredPlayers) return "Need at least $requiredPlayers players to start"
 
 		val gameWorld = WorldManager.refreshGameWorld()
 
+		pregameSetup.imposter = type === GameType.IMPOSTER
 		val game = Game(gameWorld, gamePlayers, pregameSetup)
-		game.startRound(EntryRound(game))
+		game.startNextRound()
 
 		ongoing = game
 
@@ -57,9 +66,7 @@ object GameRunner {
 		val (count, outOf) = game.currentRound().progress()
 
 		if (count == outOf || (timer != null && timer - 1 <= 0)) {
-			val nextRound = game.generateRound()
-
-			if (nextRound == null) {
+			if (game.startNextRound() == null) {
 				/* end game */
 				val lobbyLocation = Teams.lobbyLocation()
 
@@ -69,18 +76,16 @@ object GameRunner {
 				}
 
 				ongoing = null
-			} else {
-				game.startRound(nextRound)
 			}
 		}
 	}
 
 	/* happens every second (20 ticks) */
-	fun updateBossBarAndHotbar(player: Player, currentTick: Int) {
+	fun updateBossBarAndHotbar(player: Player) {
 		val game = ongoing
 
 		if (game == null) {
-			BarManager.updateBossBar(player, "Building Game", 1.0f, BossEvent.BossBarColor.WHITE)
+			BarManager.updateBossBar(player, "Building game.Game", 1.0f, BossEvent.BossBarColor.WHITE)
 
 			val playerData = PlayerData.get(player.uniqueId)
 
@@ -106,7 +111,7 @@ object GameRunner {
 			)
 
 			if (game.playerInGame(player.uniqueId)) {
-				player.sendActionBar(Component.text("$GOLD${round.reminderText(player.uniqueId, currentTick / 100)}"))
+				player.sendActionBar(Component.text("$GOLD${round.reminderText(player.uniqueId)}"))
 			}
 		}
 	}

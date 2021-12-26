@@ -1,6 +1,5 @@
 package round
 
-import Room
-import Round
+import java.util.*
 
-data class TourData(val row: Int, val col: Int, val round: Round, val room: Room?, val name: String)
+data class TourData(val access: RoomAccess, val player: UUID, val name: String, val doTeleport: Boolean)

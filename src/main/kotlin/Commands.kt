@@ -3,6 +3,8 @@ import co.aikar.commands.PaperCommandManager
 import co.aikar.commands.annotation.CommandAlias
 import co.aikar.commands.annotation.CommandCompletion
 import co.aikar.commands.annotation.Subcommand
+import game.GameRunner
+import game.GameType
 import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.TextColor
@@ -10,7 +12,10 @@ import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.*
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
-import round.*
+import round.Room
+import round.RoomAccess
+import round.Round
+import round.rounds.*
 import java.util.*
 
 @CommandAlias("bg")
@@ -125,15 +130,15 @@ class Commands : BaseCommand() {
 	}
 
 	@Subcommand("start")
-	fun startCommand(sender: CommandSender) {
+	fun startCommand(sender: CommandSender, type: GameType) {
 		val player = filter(sender, true) ?: return
 
-		val errorMessage = GameRunner.startGame()
+		val errorMessage = GameRunner.startGame(type)
 
 		if (errorMessage != null) {
 			errorMessage(player, errorMessage)
 		} else {
-			sendMessage(player, "Game starting")
+			sendMessage(player, "game.Game starting")
 		}
 	}
 
@@ -202,7 +207,7 @@ class Commands : BaseCommand() {
 
 			/* create the reveal order once everyone has voted */
 			if (round.votes.size == round.game.numPlayers()) {
-				val imposter = (round.game.previousRound() as ImposterRound).imposter
+				val imposter = RoomAccess.at(round.game, round).traverse(-1).round<ImposterRound>().imposter
 
 				/* don't include imposter yet */
 				val voteCounts = round.votes
@@ -241,7 +246,7 @@ class Commands : BaseCommand() {
 			}
 			is VoteRound -> {
 				round.game.gamePlayers.forEach { uuid ->
-					round.votes.putIfAbsent(uuid, round.game.imposterPositions[0])
+					round.votes.putIfAbsent(uuid, round.game.gamePlayers.random())
 				}
 			}
 			else -> errorMessage(player, "Force is not available for this round")

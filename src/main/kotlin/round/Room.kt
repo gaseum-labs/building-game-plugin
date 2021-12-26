@@ -1,3 +1,5 @@
+package round
+
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.World
@@ -11,6 +13,7 @@ class Room (
 	val spawnX: Int,
 	val spawnZ: Int,
 	val area: Area?,
+	val index: Int,
 ) {
 	data class Area (val x: Int, val z: Int, val width: Int, val depth: Int)
 
@@ -37,6 +40,64 @@ class Room (
 					}
 				}
 			}
+		}
+
+		fun generateSmall(
+			x: Int,
+			z: Int,
+			roomSize: Int,
+			buildSize: Int,
+			holdingSize: Int,
+			numPlayers: Int
+		): Array<Room> {
+			val offsetX = (roomSize - holdingSize) / 2
+
+			return Array(numPlayers) { i -> Room(
+				x + i * roomSize + offsetX, z,
+				holdingSize,
+				holdingSize,
+				holdingSize / 2,
+				holdingSize / 2,
+				null,
+				i
+			)
+			}
+		}
+
+		fun generate(
+			x: Int,
+			z: Int,
+			roomSize: Int,
+			buildSize: Int,
+			holdingSize: Int,
+			numPlayers: Int
+		): Array<Room> {
+			return Array(numPlayers) { i -> Room(
+				x + i * roomSize, z,
+				roomSize,
+				roomSize,
+				roomSize / 2,
+				(roomSize - buildSize) / 4,
+				Area(
+					(roomSize - buildSize) / 2,
+					(roomSize - buildSize) / 2,
+					buildSize,
+					buildSize
+				),
+				i
+			)
+			}
+		}
+
+		fun doNotGenerate(
+			x: Int,
+			z: Int,
+			roomSize: Int,
+			buildSize: Int,
+			holdingSize: Int,
+			numPlayers: Int
+		): Array<Room>? {
+			return null
 		}
 	}
 
