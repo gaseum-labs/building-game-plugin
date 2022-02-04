@@ -1,6 +1,6 @@
 import kotlin.random.Random
 
-class Grid(val size: Int) {
+class Grid(val size: Int, val rowAccessRule: (Int) -> Int) {
     val grid: Array<Int> = generateBase(size)
 
     init {
@@ -10,16 +10,18 @@ class Grid(val size: Int) {
     }
 
     fun access(row: Int, col: Int): Int {
-        return grid[row * size + col]
+        return grid[rowAccessRule(row) * size + col]
     }
 
     fun indexOnRow(row: Int, find: Int): Int {
         for (i in 0 until size) {
-            if (grid[row * size + i] == find) return i
+            if (grid[rowAccessRule(row) * size + i] == find) return i
         }
 
         return -1
     }
+
+    /* generation */
 
     private fun generateBase(size: Int): Array<Int> {
         return Array(size * size) { i ->

@@ -151,7 +151,7 @@ class Room (
 		}
 
 		/* spawn */
-		world.getBlockAt(spawnX, FLOOR_Y, spawnZ).setType(Material.LAPIS_BLOCK, false)
+		world.getBlockAt(x + spawnX, FLOOR_Y, z + spawnZ).setType(Material.LAPIS_BLOCK, false)
 
 		/* clear out the air */
 		for (i in x + 1 until x + width - 1) {

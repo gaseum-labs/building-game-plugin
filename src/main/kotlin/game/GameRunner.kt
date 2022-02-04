@@ -35,7 +35,7 @@ object GameRunner {
 	}
 
 	fun startGame(type: GameType): String? {
-		if (ongoing != null) return "game.Game is already running"
+		if (ongoing != null) return "game is already running"
 
 		val gamePlayers = PlayerData.list.filter { (_, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
 
@@ -68,14 +68,11 @@ object GameRunner {
 		if (count == outOf || (timer != null && timer - 1 <= 0)) {
 			if (game.startNextRound() == null) {
 				/* end game */
-				val lobbyLocation = Teams.lobbyLocation()
+				ongoing = null
 
 				game.gamePlayers.mapNotNull { Bukkit.getPlayer(it) }.forEach { player ->
 					Teams.updatePlayer(player)
-					player.teleport(lobbyLocation)
 				}
-
-				ongoing = null
 			}
 		}
 	}
@@ -85,7 +82,7 @@ object GameRunner {
 		val game = ongoing
 
 		if (game == null) {
-			BarManager.updateBossBar(player, "Building game.Game", 1.0f, BossEvent.BossBarColor.WHITE)
+			BarManager.updateBossBar(player, "Building game", 1.0f, BossEvent.BossBarColor.WHITE)
 
 			val playerData = PlayerData.get(player.uniqueId)
 

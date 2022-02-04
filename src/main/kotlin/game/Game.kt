@@ -17,15 +17,20 @@ import java.time.Duration
 import java.util.*
 
 class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
-	val grid = Grid(gamePlayers.size)
+	val grid = Grid(gamePlayers.size) { inputRow ->
+		if (setup.imposter) when (inputRow) {
+			-1 -> 2 /* access -1 for determining imposters */
+			0 -> 0 /* prompt */
+			1 -> 0 /* builder builds their own prompt */
+			2 -> 1 /* another person guesses the build */
+			else -> 0 /* builders go back to their own lanes */
+		} else inputRow
+	}
+
 	/**
-	 *  completely independent of game positions
-	 *
-	 *  column: the imposter round index
-	 *  row 0: the original builder
-	 *  row 1: the imposter
+	 * indices list of which column of the first three rounds defines the next imposter/vote round
 	 */
-	val imposterGrid = Grid(gamePlayers.size)
+	val imposterColumnOrder = Array(gamePlayers.size) { it }
 
 	val rounds = ArrayList<Round>()
 
@@ -41,30 +46,34 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 	fun playerInGame(uuid: UUID) = playersIndex(uuid) != -1
 	fun currentRound() = rounds.last()
 
+	/**
+	 * for imposter mode:
+	 * > use row 0 for prompt and build
+	 * > use row 1 for guess
+	 * > use row 0 again for imposter rounds
+	 * otherwise use the row corresponding to the round index
+	 */
+
 	fun getPlayersRoom(round: Round, uuid: UUID): Room {
 		/* for imposter and vote rounds, use the positions from row index 3 */
-		return round.rooms[grid.indexOnRow(
-			if (setup.imposter && round.index > 3) 3 else round.index,
-			playersIndex(uuid)
-		)]
+		return round.rooms[grid.indexOnRow(round.index, playersIndex(uuid))]
 	}
 
 	fun getRoomsPlayer(roundIndex: Int, roomIndex: Int): UUID {
-		return gamePlayers[grid.access(if (setup.imposter && roundIndex > 3) 3 else roundIndex, roomIndex)]
+		return gamePlayers[grid.access(roundIndex, roomIndex)]
 	}
-	fun getRoomsPlayer(round: Round, room: Room): UUID {
-		return gamePlayers[grid.access(if (setup.imposter && round.index > 3) 3 else round.index, room.index)]
-	}
-	fun getRoomsPlayer(access: RoomAccess): UUID {
-		return gamePlayers[grid.access(if (setup.imposter && access.round.index > 3) 3 else access.round.index, access.room.index)]
-	}
+	fun getRoomsPlayer(round: Round, room: Room) = getRoomsPlayer(round.index, room.index)
+	fun getRoomsPlayer(access: RoomAccess) = getRoomsPlayer(access.round.index, access.room.index)
 
-	fun getOriginalBuilder(round: Round): UUID {
-		return gamePlayers[imposterGrid.access(0, imposterRoundIndex(round.index))]
+	/**
+	 * @param partIndex - the previous round which is being examined
+	 */
+	private fun getOriginal(round: Round, partIndex: Int): UUID {
+		return getRoomsPlayer(partIndex, imposterColumnOrder[imposterRoundIndex(round.index)])
 	}
-	fun getImposter(round: Round): UUID {
-		return gamePlayers[imposterGrid.access(1, imposterRoundIndex(round.index))]
-	}
+	fun getOriginalBuilder(round: Round) = getOriginal(round, 0) /* prompt round (1 would work too) */
+	fun getOriginalGuesser(round: Round) = getOriginal(round, 2) /* guess round */
+	fun getImposter(round: Round) = getOriginal(round, -1) /* special access for imposters */
 
 	/**
 	 * @return null to end the game

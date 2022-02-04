@@ -138,8 +138,22 @@ class Commands : BaseCommand() {
 		if (errorMessage != null) {
 			errorMessage(player, errorMessage)
 		} else {
-			sendMessage(player, "game.Game starting")
+			sendMessage(player, "Game starting")
 		}
+	}
+
+	@Subcommand("lobby")
+	fun lobbyCommand(sender: CommandSender, type: GameType) {
+		val player = filter(sender, true) ?: return
+
+		val gameWorld = WorldManager.gameWorld ?: return errorMessage(player, "There is not game world")
+		val lobbyLocation = Teams.lobbyLocation()
+
+		gameWorld.players.forEach { player ->
+			player.teleport(lobbyLocation)
+		}
+
+		sendMessage(sender, "Players returned to lobby")
 	}
 
 	/* game commands */
