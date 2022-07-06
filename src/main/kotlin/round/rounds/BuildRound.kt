@@ -2,7 +2,6 @@ package round.rounds
 
 import game.Game
 import round.Room
-import org.bukkit.ChatColor
 import round.RoomAccess
 import round.TourData
 import java.util.*
@@ -14,7 +13,7 @@ class BuildRound(game: Game, rooms: Array<Room>, index: Int) : AbstractBuildRoun
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {
 		return Triple(
-			"${ChatColor.AQUA}Build!",
+			"Build!",
 			AbstractTextRound.getSubmitted(RoomAccess.at(game, this, uuid).traverse(-1)),
 			"Use /done when you are finished"
 		)

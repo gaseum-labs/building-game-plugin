@@ -2,7 +2,6 @@ package round.rounds
 
 import game.Game
 import round.Room
-import org.bukkit.ChatColor
 import round.TourData
 import java.util.*
 
@@ -18,7 +17,7 @@ class GuessRound(game: Game, rooms: Array<Room>, index: Int) : AbstractTextRound
 	/* display */
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {
-		return Triple("${ChatColor.LIGHT_PURPLE}Guess!", "", "Use /guess to submit a guess")
+		return Triple("Guess!", "", "Use /guess to submit a guess")
 	}
 
 	override fun barText(): Pair<String, String> {

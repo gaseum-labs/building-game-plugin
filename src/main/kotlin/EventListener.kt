@@ -10,8 +10,6 @@ class EventListener : Listener {
 	fun onPlayerJoin(event: PlayerJoinEvent) {
 		val player = event.player
 
-		BarManager.addBossBar(player)
-
 		Teams.updatePlayer(player)
 
 		val game = GameRunner.ongoing ?: return

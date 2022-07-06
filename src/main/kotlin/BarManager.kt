@@ -1,46 +1,24 @@
-import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.TextComponent
-import net.minecraft.network.protocol.game.ClientboundBossEventPacket
-import net.minecraft.world.BossEvent
-import org.bukkit.craftbukkit.v1_18_R1.entity.CraftPlayer
+import net.kyori.adventure.bossbar.BossBar
+import net.kyori.adventure.text.TextComponent
 import org.bukkit.entity.Player
 import java.util.*
+import kotlin.collections.HashMap
 
 object BarManager {
-	class CustomBossEvent(uuid: UUID, name: Component, color: BossBarColor, style: BossBarOverlay)
-		: BossEvent(uuid, name, color, style)
+	val barMap = HashMap<UUID, BossBar>()
 
-	fun addBossBar(player: Player) {
-		(player as CraftPlayer).handle.connection.send(
-			ClientboundBossEventPacket.createAddPacket(
-				CustomBossEvent(
-					player.uniqueId,
-					TextComponent(""),
-					BossEvent.BossBarColor.WHITE,
-					BossEvent.BossBarOverlay.PROGRESS
-				)
-			)
-		)
-	}
-
-	fun updateBossBar(
+	fun newBossBar(
 		player: Player,
-		name: String,
+		name: TextComponent,
 		progress: Float,
-		barColor: BossEvent.BossBarColor,
+		barColor: BossBar.Color
 	) {
-		val bossBar = CustomBossEvent(
-			player.uniqueId,
-			TextComponent(name),
-			barColor,
-			BossEvent.BossBarOverlay.PROGRESS
-		)
-		bossBar.progress = progress
-
-		val connection = (player as CraftPlayer).handle.connection
-
-		connection.send(ClientboundBossEventPacket.createUpdateNamePacket(bossBar))
-		connection.send(ClientboundBossEventPacket.createUpdateProgressPacket(bossBar))
-		// connection.send(ClientboundBossEventPacket.createUpdateStylePacket(bossBar))
+		val bossBar = barMap.getOrPut(player.uniqueId) {
+			BossBar.bossBar(name, progress, barColor, BossBar.Overlay.PROGRESS)
+		}
+		bossBar.name(name)
+		bossBar.progress(progress)
+		bossBar.color(barColor)
+		player.showBossBar(bossBar)
 	}
 }

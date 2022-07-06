@@ -96,7 +96,7 @@ class Commands : BaseCommand() {
 
 	@Subcommand("setParticipating")
 	@CommandCompletion("@gamePlayer")
-	fun forceJoinCommand(sender: CommandSender, participating: Boolean, player: OfflinePlayer) {
+	fun forceJoinCommand(sender: CommandSender, player: OfflinePlayer, participating: Boolean) {
 		filter(sender, true) ?: return
 
 		val playerData = PlayerData.get(player.uniqueId)

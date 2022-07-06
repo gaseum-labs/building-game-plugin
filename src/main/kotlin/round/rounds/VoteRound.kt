@@ -4,7 +4,6 @@ import game.Game
 import round.Room
 import round.Round
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import round.RoomAccess
 import round.TourData
 import java.util.*
@@ -38,7 +37,7 @@ class VoteRound(game: Game, rooms: Array<Room>, index: Int) : Round(game, rooms,
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {
 		return Triple(
-			"There is ${ChatColor.RED}${ChatColor.BOLD}1 ${ChatColor.RESET}imposter among us for:",
+			"There is 1 imposter among us for:",
 			RoomAccess.at(game, this).traverse(-1).round<ImposterRound>().prompt,
 			"Use /vote to vote out the imposter"
 		)
@@ -63,9 +62,9 @@ class VoteRound(game: Game, rooms: Array<Room>, index: Int) : Round(game, rooms,
 
 		return if (tourData.player == tourData.access.copy().traverse(-1).round<ImposterRound>().imposter) {
 			Pair("${tourData.name} was the imposter!", if (numVotes.toFloat() < game.numPlayers() / 2.0f) {
-				"${ChatColor.GREEN}Safe with $numVotes votes"
+				"Safe with $numVotes votes"
 			} else {
-				"${ChatColor.RED}Voted out with $numVotes votes!"
+				"Voted out with $numVotes votes!"
 			})
 		} else {
 			Pair("${tourData.name} was innocent!", "Received $numVotes votes")

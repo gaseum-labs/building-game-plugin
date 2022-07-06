@@ -2,7 +2,6 @@ package round.rounds
 
 import game.Game
 import round.Room
-import org.bukkit.ChatColor
 import round.RoomAccess
 import round.TourData
 import java.util.*
@@ -21,7 +20,7 @@ class EntryRound(game: Game, rooms: Array<Room>, index: Int) : AbstractTextRound
 	/* display */
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {
-		return Triple("${ChatColor.GREEN}Submit a Prompt!", "", "Use /prompt [prompt] to submit")
+		return Triple("Submit a Prompt!", "", "Use /prompt [prompt] to submit")
 	}
 
 	override fun barText(): Pair<String, String> {

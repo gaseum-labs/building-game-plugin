@@ -2,7 +2,6 @@ package round.rounds
 
 import game.Game
 import round.Room
-import org.bukkit.ChatColor
 import round.RoomAccess
 import round.TourData
 import java.util.*
@@ -41,10 +40,10 @@ class ImposterRound(game: Game, rooms: Array<Room>, index: Int) : AbstractBuildR
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {
 		return when (uuid) {
-			originalBuilder -> Triple("${ChatColor.GOLD}Your Build!", "You're the original builder for this round", null)
-			originalGuesser -> Triple("${ChatColor.GOLD}Build your guess!", "You're the original guesser for this round", null)
-			imposter -> Triple("${ChatColor.RED}You're the imposter!", corruptedPrompt, "Use /done when you are finished")
-			else -> Triple("${ChatColor.GREEN}Innocent!", prompt, "Use /done when you are finished")
+			originalBuilder -> Triple("Your Build!", "You're the original builder for this round", null)
+			originalGuesser -> Triple("Build your guess!", "You're the original guesser for this round", null)
+			imposter -> Triple("You're the imposter!", corruptedPrompt, "Use /done when you are finished")
+			else -> Triple("Innocent!", prompt, "Use /done when you are finished")
 		}
 	}
 

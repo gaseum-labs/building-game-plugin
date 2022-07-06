@@ -6,10 +6,11 @@ import PlayerData
 import Teams
 import Util
 import WorldManager
+import net.kyori.adventure.bossbar.BossBar
 import net.kyori.adventure.text.Component
-import net.minecraft.world.BossEvent
+import net.kyori.adventure.text.format.NamedTextColor.*
+import net.kyori.adventure.text.format.TextDecoration.BOLD
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor.*
 import org.bukkit.entity.Player
 
 object GameRunner {
@@ -82,15 +83,18 @@ object GameRunner {
 		val game = ongoing
 
 		if (game == null) {
-			BarManager.updateBossBar(player, "Building game", 1.0f, BossEvent.BossBarColor.WHITE)
+			BarManager.newBossBar(player, Component.text("Building game"), 1.0f, BossBar.Color.WHITE)
 
 			val playerData = PlayerData.get(player.uniqueId)
 
-			player.sendActionBar(Component.text(if (playerData.participating) {
-				"${GREEN}You have joined, Use /bg leave to leave the game"
-			} else {
-				"${RED}Use /bg join to join the game"
-			}))
+			player.sendActionBar(
+				if (playerData.participating) {
+					Component.text("You have joined, Use /bg leave to leave the game", GREEN)
+				} else {
+					Component.text("Use /bg join to join the game", RED)
+				}
+			)
+
 
 		} else {
 			val round = game.currentRound()
@@ -98,17 +102,30 @@ object GameRunner {
 			val (count, total) = round.progress()
 
 			val timer = game.timer
-			val timeString = if (timer != null) " ${AQUA}Time Remaining: $BOLD${Util.timeString(timer)}" else ""
 
-			BarManager.updateBossBar(
+			val component = Component.text(name, AQUA, BOLD).append(
+				Component.text(" $outOf: ", BLUE)
+			).append(
+				Component.text(count, BLUE, BOLD)
+			).append(
+				Component.text(" / ", BLUE)
+			).append(
+				Component.text(total, BLUE, BOLD)
+			).append(if (timer != null)
+				Component.text(" Time Remaining", AQUA).append(Component.text(Util.timeString(timer), WHITE, BOLD))
+			 else
+				Component.empty()
+			)
+
+			BarManager.newBossBar(
 				player,
-				"$AQUA$BOLD${name} $BLUE${outOf}: $BOLD${count}$BLUE / $BOLD$total" + timeString,
+				component,
 				if (timer != null) timer / game.time.toFloat() else count / total.toFloat(),
-				BossEvent.BossBarColor.BLUE
+				BossBar.Color.BLUE
 			)
 
 			if (game.playerInGame(player.uniqueId)) {
-				player.sendActionBar(Component.text("$GOLD${round.reminderText(player.uniqueId)}"))
+				player.sendActionBar(Component.text(round.reminderText(player.uniqueId), GOLD))
 			}
 		}
 	}
