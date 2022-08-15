@@ -33,6 +33,36 @@ class VoteRound(game: Game, rooms: Array<Room>, index: Int) : Round(game, rooms,
 
 	override fun doRoomTeleport(): Boolean = false
 
+	/** returns false if you could not vote for that player */
+	fun vote(voter: UUID, candidate: UUID): Boolean {
+		return if (game.gamePlayers.contains(candidate)) {
+			votes[voter] = candidate
+			Teams.updatePlayer(BGPlayer.getPlayer(voter))
+
+			/* create the reveal order once everyone has voted */
+			if (votes.size == game.numPlayers()) createRevealOrder()
+
+			true
+		} else {
+			false
+		}
+	}
+
+	private fun createRevealOrder() {
+		val imposter = RoomAccess.at(game, this).traverse(-1).round<ImposterRound>().imposter
+
+		/* don't include imposter yet */
+		val voteCounts = ArrayList(votes
+			.filter { (player, _) -> player != imposter }
+			.map { (player, _) -> Pair(player, votes.filterValues { it == player }.size) }
+			.sortedBy { (_, count) -> count })
+
+		/* place imposter last */
+		voteCounts.add(Pair(imposter, votes.filterValues { it == imposter }.size))
+
+		revealOrder.addAll(voteCounts)
+	}
+
 	/* display */
 
 	override fun splashText(uuid: UUID): Triple<String, String, String?> {

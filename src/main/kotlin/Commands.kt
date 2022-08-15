@@ -23,7 +23,7 @@ class Commands : BaseCommand() {
 	companion object {
 		fun registerCompletions(commandManager: PaperCommandManager) {
 			commandManager.commandCompletions.registerCompletion("gameplayer") {
-				PlayerData.list.map { (uuid, _) -> Bukkit.getOfflinePlayer(uuid).name }
+				PlayerData.all().map { (_, data) -> data.name }
 			}
 		}
 
@@ -40,18 +40,23 @@ class Commands : BaseCommand() {
 				if (op && !sender.isOp) {
 					errorMessage(sender, "You must be an op to use this command")
 					null
-
 				} else {
 					sender
 				}
-
 			} else {
 				errorMessage(sender, "Command must be performed by a player")
 				null
 			}
 		}
 
-		fun <T : Round>roundFilter(sender: CommandSender, op: Boolean = false): Pair<Player, T>? {
+		fun consoleOpFilter(sender: CommandSender): CommandSender? {
+			return if (sender.isOp) sender else {
+				errorMessage(sender, "You must be an op to use this command")
+				null
+			}
+		}
+
+		fun <T : Round>roundFilter(sender: CommandSender, op: Boolean, clazz: Class<T>): Pair<Player, T>? {
 			val player = filter(sender, op) ?: return null
 
 			val game = GameRunner.ongoing
@@ -64,14 +69,34 @@ class Commands : BaseCommand() {
 				errorMessage(player, "You must be playing the game to use this command")
 			}
 
-			val round = game.currentRound() as? T
-			if (round == null) {
+			val round = game.currentRound()
+			if (!clazz.isInstance(round)) {
 				errorMessage(player, "You can't use this command this round")
 				return null
 			}
 
-			return Pair(player, round)
+			return Pair(player, round as T)
 		}
+	}
+
+	@Subcommand("createBots")
+	fun createBotsCommand(sender: CommandSender, count: Int) {
+		consoleOpFilter(sender) ?: return
+
+		for (i in 0 until count) PlayerData.createDummy()
+
+		sendMessage(sender, "Created ${count} bots")
+	}
+
+	@Subcommand("killBots")
+	fun killBotsCommand(sender: CommandSender) {
+		consoleOpFilter(sender) ?: return
+
+		val game = GameRunner.ongoing
+		if (game != null) return errorMessage(sender, "Can't kill bots when game is going")
+
+		PlayerData.clearDummies()
+		sendMessage(sender, "Killed all bots")
 	}
 
 	@Subcommand("join")
@@ -82,11 +107,11 @@ class Commands : BaseCommand() {
 			return errorMessage(player, "The game has already started")
 		}
 
-		val playerData = PlayerData.get(player.uniqueId)
+		val bgPlayer = BGPlayer.from(player)
 
-		if (!playerData.participating) {
-			playerData.participating = true
-			Teams.updatePlayer(player)
+		if (!bgPlayer.playerData.participating) {
+			bgPlayer.playerData.participating = true
+			Teams.updatePlayer(bgPlayer)
 			sendMessage(player, "You have joined the game")
 
 		} else {
@@ -96,17 +121,36 @@ class Commands : BaseCommand() {
 
 	@Subcommand("setParticipating")
 	@CommandCompletion("@gamePlayer")
-	fun forceJoinCommand(sender: CommandSender, player: OfflinePlayer, participating: Boolean) {
-		filter(sender, true) ?: return
+	fun forceJoinCommand(sender: CommandSender, playerName: String, participating: Boolean) {
+		consoleOpFilter(sender) ?: return
 
-		val playerData = PlayerData.get(player.uniqueId)
+		if (GameRunner.ongoing != null)
+			return errorMessage(sender, "Game is already going")
 
-		playerData.participating = participating
+		val bgPlayer = BGPlayer.getPlayerName(playerName)
+			?: return errorMessage(sender, "That player doesn't exist")
 
-		val onlinePlayer = Bukkit.getPlayer(player.uniqueId)
-		if (onlinePlayer != null) Teams.updatePlayer(onlinePlayer)
+		bgPlayer.playerData.participating = participating
+		Teams.updatePlayer(bgPlayer)
 
-		sendMessage(sender, "${player.name}'s participating has been set to $participating")
+		sendMessage(sender, "${bgPlayer.name}'s participating has been set to $participating")
+	}
+
+	@Subcommand("setParticipatingAll")
+	fun forceJoinCommand(sender: CommandSender) {
+		consoleOpFilter(sender) ?: return
+
+		if (GameRunner.ongoing != null)
+			return errorMessage(sender, "Game is already going")
+
+		val allPlayerData = PlayerData.all()
+
+		allPlayerData.forEach { (uuid, playerData) ->
+			playerData.participating = true
+			Teams.updatePlayer(BGPlayer.getPlayer(uuid))
+		}
+
+		sendMessage(sender, "Set ${allPlayerData.size} players to participating")
 	}
 
 	@Subcommand("leave")
@@ -117,11 +161,11 @@ class Commands : BaseCommand() {
 			return errorMessage(player, "The game has already started")
 		}
 
-		val playerData = PlayerData.get(player.uniqueId)
+		val bgPlayer = BGPlayer.from(player)
 
-		if (playerData.participating) {
-			playerData.participating = false
-			Teams.updatePlayer(player)
+		if (bgPlayer.playerData.participating) {
+			bgPlayer.playerData.participating = false
+			Teams.updatePlayer(bgPlayer)
 			sendMessage(player, "You have left the game")
 
 		} else {
@@ -131,22 +175,24 @@ class Commands : BaseCommand() {
 
 	@Subcommand("start")
 	fun startCommand(sender: CommandSender, type: GameType) {
-		val player = filter(sender, true) ?: return
+		consoleOpFilter(sender) ?: return
 
 		val errorMessage = GameRunner.startGame(type)
 
 		if (errorMessage != null) {
-			errorMessage(player, errorMessage)
+			errorMessage(sender, errorMessage)
 		} else {
-			sendMessage(player, "Game starting")
+			sendMessage(sender, "Game starting")
 		}
 	}
 
 	@Subcommand("lobby")
-	fun lobbyCommand(sender: CommandSender, type: GameType) {
-		val player = filter(sender, true) ?: return
+	fun lobbyCommand(sender: CommandSender) {
+		consoleOpFilter(sender) ?: return
 
-		val gameWorld = WorldManager.gameWorld ?: return errorMessage(player, "There is not game world")
+		GameRunner.stopGame()
+
+		val gameWorld = WorldManager.gameWorld ?: return errorMessage(sender, "There is not game world")
 		val lobbyLocation = Teams.lobbyLocation()
 
 		gameWorld.players.forEach { player ->
@@ -159,7 +205,7 @@ class Commands : BaseCommand() {
 	/* game commands */
 	@CommandAlias("prompt")
 	fun promptCommand(sender: CommandSender, prompt: String) {
-		val (player, round) = roundFilter<EntryRound>(sender) ?: return
+		val (player, round) = roundFilter(sender, false, EntryRound::class.java) ?: return
 
 		if (round.submit(player.uniqueId, prompt)) {
 			sendMessage(player, "Submitted prompt, you may /prompt again to update your prompt")
@@ -170,7 +216,7 @@ class Commands : BaseCommand() {
 
 	@CommandAlias("next")
 	fun nextCommand(sender: CommandSender) {
-		val (player, round) = roundFilter<TourRound>(sender, true) ?: return
+		val (player, round) = roundFilter(sender, true, TourRound::class.java) ?: return
 
 		if (++round.tourAlong == round.tourSize()) {
 			sendMessage(player, "End of tour reached")
@@ -181,7 +227,7 @@ class Commands : BaseCommand() {
 
 	@CommandAlias("done")
 	fun doneCommand(sender: CommandSender) {
-		val (player, round) = roundFilter<BuildRound>(sender) ?: return
+		val (player, round) = roundFilter(sender, true, AbstractBuildRound::class.java) ?: return
 
 		if (round.game.playersIndex(player.uniqueId) == -1) {
 			return errorMessage(player, "You are not playing")
@@ -191,15 +237,14 @@ class Commands : BaseCommand() {
 			errorMessage(player, "You are already done")
 
 		} else {
-			round.donePlayers.add(player.uniqueId)
-			Teams.updatePlayer(player)
+			round.makeDone(player.uniqueId)
 			sendMessage(player, "Marked as done, you may keep building until everyone is done")
 		}
 	}
 
 	@CommandAlias("guess")
 	fun guessCommand(sender: CommandSender, prompt: String) {
-		val (player, round) = roundFilter<GuessRound>(sender) ?: return
+		val (player, round) = roundFilter(sender, false, GuessRound::class.java) ?: return
 
 		if (round.submit(player.uniqueId, prompt)) {
 			sendMessage(player, "Submitted guess, you may /guess again to update your guess")
@@ -210,31 +255,14 @@ class Commands : BaseCommand() {
 
 	@CommandAlias("vote")
 	@CommandCompletion("@gamePlayer")
-	fun voteCommand(sender: CommandSender, votePlayer: OfflinePlayer) {
-		val (player, round) = roundFilter<VoteRound>(sender) ?: return
+	fun voteCommand(sender: CommandSender, candidateName: String) {
+		val (player, round) = roundFilter(sender, false, VoteRound::class.java) ?: return
 
-		val voteUUID = votePlayer.uniqueId
+		val candidate = BGPlayer.getPlayerName(candidateName)
+			?: return errorMessage(player, "That player doesn't exist")
 
-		if (round.game.gamePlayers.contains(voteUUID)) {
-			round.votes[player.uniqueId] = voteUUID
-			Teams.updatePlayer(player)
-
-			/* create the reveal order once everyone has voted */
-			if (round.votes.size == round.game.numPlayers()) {
-				val imposter = RoomAccess.at(round.game, round).traverse(-1).round<ImposterRound>().imposter
-
-				/* don't include imposter yet */
-				val voteCounts = round.votes
-					.filter { (player, _) -> player != imposter }
-					.map { (player, _) -> Pair(player, round.votes.filterValues { it == player }.size) }
-					.sortedBy { (_, count) -> count } as MutableList<Pair<UUID, Int>>
-
-				/* place imposter last */
-				voteCounts.add(Pair(imposter, round.votes.filterValues { it == imposter }.size))
-
-				round.revealOrder.addAll(voteCounts)
-			}
-
+		if (round.vote(player.uniqueId, candidate.uuid)) {
+			sendMessage(player, "Voted for ${candidate.name}")
 		} else {
 			errorMessage(player, "That player isn't playing")
 		}
@@ -242,7 +270,7 @@ class Commands : BaseCommand() {
 
 	@Subcommand("forceEnd")
 	fun forceEndCommand(sender: CommandSender) {
-		val (player, round) = roundFilter<Round>(sender, true) ?: return
+		val (player, round) = roundFilter(sender, true, Round::class.java) ?: return
 
 		when (round) {
 			is AbstractTextRound -> {
@@ -283,5 +311,15 @@ class Commands : BaseCommand() {
 			player.teleport(Location(gameWorld, 0.5, Room.FLOOR_Y + 1.0, 0.5))
 			player.gameMode = GameMode.SPECTATOR
 		}
+	}
+
+	@CommandAlias("buildTime")
+	fun buildTimeCommand(sender: CommandSender, minutes: Int) {
+		consoleOpFilter(sender) ?: return
+
+		GameRunner.pregameSetup.buildTime = minutes * 60
+		GameRunner.ongoing?.setup?.buildTime = minutes * 60
+
+		sendMessage(sender, "Set build time to ${minutes} minutes")
 	}
 }

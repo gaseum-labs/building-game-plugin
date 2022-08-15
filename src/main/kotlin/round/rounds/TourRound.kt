@@ -1,5 +1,7 @@
 package round.rounds
 
+import BGPlayer
+import PlayerData
 import game.Game
 import round.Room
 import round.Round
@@ -34,13 +36,12 @@ class TourRound(game: Game, teams: Array<Room>, index: Int) : Round(game, teams,
 		return TourData(
 			access,
 			player,
-			Bukkit.getOfflinePlayer(player).name ?: "Unknown",
-			when (access.round) {
+			PlayerData.getUnsafe(player).name,
+			doTeleport=when (access.round) {
 				is EntryRound -> true
 				is BuildRound -> true
 				is GuessRound -> false
-				is ImposterRound -> true
-				is VoteRound -> false
+				is VoteRound -> true
 				else -> false
 			}
 		)
@@ -50,11 +51,11 @@ class TourRound(game: Game, teams: Array<Room>, index: Int) : Round(game, teams,
 		val tourData = fromAlong(along)
 		val (title, subtitle) = tourData.access.round.tourText(tourData)
 
-		game.gamePlayers.mapNotNull { Bukkit.getPlayer(it) }.forEach { player ->
+		game.gamePlayers.map(BGPlayer::getPlayer).forEach { bgPlayer ->
 			if (tourData.doTeleport) {
-				player.teleport(tourData.access.room.spawnLocation(game.world))
+				bgPlayer.teleport(tourData.access.room.spawnLocation(game.world))
 			}
-			game.sendTitle(player, title, subtitle, null)
+			game.sendTitle(bgPlayer, title, subtitle, null)
 		}
 	}
 

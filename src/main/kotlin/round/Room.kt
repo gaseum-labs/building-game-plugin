@@ -27,14 +27,22 @@ class Room (
 		val WALL_BLOCK = Material.GRAY_TERRACOTTA
 
 		fun copyArea(world: World, fromRoom: Room, toRoom: Room) {
-			val (aX0, aZ0, aW, aD) = fromRoom.area ?: return
-			val (aX1, aZ1, _, _) = toRoom.area ?: return
+			val (fromAreaX, fromAreaZ, aW, aD) = fromRoom.area ?: return
+			val (toAreaX, toAreaZ) = toRoom.area ?: return
 
 			for (i in 0 until aW) {
 				for (k in 0 until aD) {
 					for (j in FLOOR_Y - FLOOR_DESCEND until FLOOR_Y + WALL_HEIGHT) {
-						val fromBlock = world.getBlockAt(aX0 + i, j, aZ0 + k)
-						val toBlock = world.getBlockAt(aX1 + i, j, aZ1 + k)
+						val fromBlock = world.getBlockAt(
+							fromRoom.x + fromAreaX + i,
+							j,
+							fromRoom.z + fromAreaZ + k
+						)
+						val toBlock = world.getBlockAt(
+							toRoom.x + toAreaX + i,
+							j,
+							toRoom.z + toAreaZ + k
+						)
 
 						toBlock.setBlockData(fromBlock.blockData, false)
 					}
@@ -45,15 +53,16 @@ class Room (
 		fun generateSmall(
 			x: Int,
 			z: Int,
-			roomSize: Int,
+			roomWidth: Int,
+			roomDepth: Int,
 			buildSize: Int,
 			holdingSize: Int,
 			numPlayers: Int
 		): Array<Room> {
-			val offsetX = (roomSize - holdingSize) / 2
+			val offsetX = (roomWidth - holdingSize) / 2
 
 			return Array(numPlayers) { i -> Room(
-				x + i * roomSize + offsetX, z,
+				x + i * roomWidth + offsetX, z,
 				holdingSize,
 				holdingSize,
 				holdingSize / 2,
@@ -67,32 +76,36 @@ class Room (
 		fun generate(
 			x: Int,
 			z: Int,
-			roomSize: Int,
+			roomWidth: Int,
+			roomDepth: Int,
 			buildSize: Int,
 			holdingSize: Int,
 			numPlayers: Int
 		): Array<Room> {
+			val buffer = (roomWidth - buildSize) / 2
+
 			return Array(numPlayers) { i -> Room(
-				x + i * roomSize, z,
-				roomSize,
-				roomSize,
-				roomSize / 2,
-				(roomSize - buildSize) / 4,
-				Area(
-					(roomSize - buildSize) / 2,
-					(roomSize - buildSize) / 2,
+				x=x + i * roomWidth,
+				z=z,
+				width=roomWidth,
+				depth=roomDepth,
+				spawnX=roomWidth / 2,
+				spawnZ=(roomDepth - buffer - buildSize) / 2,
+				area=Area(
+					buffer,
+					roomDepth - buffer - buildSize,
 					buildSize,
 					buildSize
 				),
-				i
-			)
-			}
+				index=i
+			) }
 		}
 
 		fun doNotGenerate(
 			x: Int,
 			z: Int,
-			roomSize: Int,
+			roomWidth: Int,
+			roomDepth: Int,
 			buildSize: Int,
 			holdingSize: Int,
 			numPlayers: Int
@@ -116,7 +129,7 @@ class Room (
 	fun destroyLeftWall(world: World) {
 		for (k in z + 1 until z + depth - 1) {
 			for (j in FLOOR_Y + 1 until FLOOR_Y + WALL_HEIGHT) {
-				world.getBlockAt(x, j, k)
+				world.getBlockAt(x, j, k).setType(Material.AIR, false)
 			}
 		}
 	}
@@ -125,7 +138,7 @@ class Room (
 	fun destroyRightWall(world: World) {
 		for (k in z + 1 until z + depth - 1) {
 			for (j in FLOOR_Y + 1 until FLOOR_Y + WALL_HEIGHT) {
-				world.getBlockAt(x + width - 1, j, k)
+				world.getBlockAt(x + width - 1, j, k).setType(Material.AIR, false)
 			}
 		}
 	}
@@ -169,7 +182,7 @@ class Room (
 				world.getBlockAt(i, j, z + depth - 1).setType(WALL_BLOCK, false)
 			}
 
-			for (k in z + 1 until z + width - 1) {
+			for (k in z + 1 until z + depth - 1) {
 				world.getBlockAt(x, j, k).setType(WALL_BLOCK, false)
 				world.getBlockAt(x + width - 1, j, k).setType(WALL_BLOCK, false)
 			}

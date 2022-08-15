@@ -1,30 +1,28 @@
 package game
+import BGPlayer
 import Grid
 import Teams
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.Style
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.title.Title
-import org.bukkit.Bukkit
-import org.bukkit.Location
 import org.bukkit.World
-import org.bukkit.entity.Player
-import round.Room
-import round.RoomAccess
-import round.Round
-import round.RoundType
+import round.*
 import java.time.Duration
 import java.util.*
 
 class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
-	val grid = Grid(gamePlayers.size) { inputRow ->
+	val grid = Grid.generateGrid(gamePlayers.size) { inputRow ->
 		if (setup.imposter) when (inputRow) {
 			-1 -> 2 /* access -1 for determining imposters */
 			0 -> 0 /* prompt */
 			1 -> 0 /* builder builds their own prompt */
 			2 -> 1 /* another person guesses the build */
 			else -> 0 /* builders go back to their own lanes */
-		} else inputRow
+		} else when {
+			inputRow < gamePlayers.size -> inputRow
+			else -> 0/* make sure tour round doesn't break */
+		}
 	}
 
 	/**
@@ -71,7 +69,7 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 	private fun getOriginal(round: Round, partIndex: Int): UUID {
 		return getRoomsPlayer(partIndex, imposterColumnOrder[imposterRoundIndex(round.index)])
 	}
-	fun getOriginalBuilder(round: Round) = getOriginal(round, 0) /* prompt round (1 would work too) */
+	fun getOriginalBuilder(round: Round) = getOriginal(round, 1) /* build round (0 would work too) */
 	fun getOriginalGuesser(round: Round) = getOriginal(round, 2) /* guess round */
 	fun getImposter(round: Round) = getOriginal(round, -1) /* special access for imposters */
 
@@ -113,7 +111,15 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 		val roundIndex = rounds.size
 		val type = getRoundType(roundIndex) ?: return null
 
-		val generatedRooms = type.generateRooms(0, nextZ, setup.roomSize, setup.buildSize, setup.holdingSize, numPlayers())
+		val generatedRooms = type.generateRooms(
+			0,
+			nextZ,
+			setup.roomWidth,
+			setup.roomDepth,
+			setup.buildSize,
+			setup.holdingSize,
+			numPlayers()
+		)
 
 		val newRound = type.create(this, generatedRooms ?: currentRound().rooms, roundIndex)
 
@@ -124,18 +130,25 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 
 		newRound.postRoomsBuild()
 
-		gamePlayers.mapNotNull { Bukkit.getPlayer(it) }.forEach { player ->
+		gamePlayers.map(BGPlayer::getPlayer).forEach { bgPlayer ->
+			val playersRoom = getPlayersRoom(newRound, bgPlayer.uuid)
+
 			if (newRound.doRoomTeleport()) {
-				player.teleport(getPlayersRoom(newRound, player.uniqueId).spawnLocation(world))
+				bgPlayer.teleport(playersRoom.spawnLocation(world))
 			}
 
-			val splash = newRound.splashText(player.uniqueId)
+			val splash = newRound.splashText(bgPlayer.uuid)
 			if (splash != null) {
-				sendTitle(player, splash.first, splash.second, splash.third)
+				sendTitle(bgPlayer, splash.first, splash.second, splash.third)
 			}
 
-			Teams.updatePlayer(player)
-			Teams.resetPlayerStats(player)
+			/* fake players performing actions automatically */
+			if (bgPlayer.playerData.dummy) {
+				FakeBuilder.performRoundAction(bgPlayer, newRound, playersRoom)
+			}
+
+			Teams.updatePlayer(bgPlayer)
+			Teams.resetPlayerStats(bgPlayer)
 		}
 
 		/* start the timer if applicable */
@@ -146,17 +159,13 @@ class Game(val world: World, val gamePlayers: List<UUID>, val setup: Setup) {
 		return newRound
 	}
 
-	fun sendTitle(player: Player, title: String, subtitle: String, reminder: String?) {
-		player.showTitle(Title.title(Component.text(title), Component.text(subtitle), Title.Times.of(Duration.ZERO, Duration.ofSeconds(2), Duration.ofSeconds(1))))
+	fun sendTitle(bgPlayer: BGPlayer, title: String, subtitle: String, reminder: String?) {
+		val player = bgPlayer.player ?: return
+		player.showTitle(Title.title(Component.text(title), Component.text(subtitle), Title.Times.times(Duration.ZERO, Duration.ofSeconds(2), Duration.ofSeconds(1))))
 		player.sendMessage(Component.text("$title ").append(Component.text(subtitle).style(Style.style(TextDecoration.BOLD))))
 
 		if (reminder != null) {
 			player.sendMessage(Component.text(reminder).style(Style.style(TextDecoration.ITALIC)))
 		}
-	}
-
-	fun getPlayerLoginLocation(uuid: UUID): Location? {
-		if (!playerInGame(uuid)) return null
-		return getPlayersRoom(currentRound(), uuid).spawnLocation(world)
 	}
 }

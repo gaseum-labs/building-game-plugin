@@ -1,5 +1,6 @@
 package round.rounds
 
+import BGPlayer
 import game.Game
 import round.Room
 import round.RoomAccess
@@ -30,7 +31,7 @@ class ImposterRound(game: Game, rooms: Array<Room>, index: Int) : AbstractBuildR
 
 		Room.copyArea(game.world, oldBuildRoom, newBuildRoom)
 
-		donePlayers.add(originalBuilder)
+		makeDone(originalBuilder)
 	}
 
 	/* would spoil who the original builder is */

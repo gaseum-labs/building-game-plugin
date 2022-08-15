@@ -3,21 +3,30 @@ import org.bukkit.Location
 import org.bukkit.entity.Player
 import java.util.UUID
 
-class BGPlayer(val uuid: UUID, val player: Player?) {
+/**
+ * Essentially, a temporary view into a PlayerData that is to the currently presence of the player
+ */
+class BGPlayer(
+	val uuid: UUID,
+	/** duplicate field of playerData for convenience */
+	val name: String,
+	val player: Player?,
+	val playerData: PlayerData
+) {
 	companion object {
 		fun getPlayer(uuid: UUID): BGPlayer {
-			return BGPlayer(uuid, Bukkit.getPlayer(uuid))
+			val onlinePlayer = Bukkit.getPlayer(uuid)
+			val playerData = PlayerData.getUnsafe(uuid)
+			return BGPlayer(uuid, playerData.name, onlinePlayer, playerData)
 		}
 
-		private val teleportMaps = HashMap<UUID, Location>()
-
-		fun clearTeleportMaps() {
-			teleportMaps.clear()
+		fun getPlayerName(name: String): BGPlayer? {
+			val data = PlayerData.getName(name) ?: return null
+			return BGPlayer(data.uuid, name, Bukkit.getPlayer(data.uuid), data)
 		}
 
-		/** also clears map entry */
-		fun getTeleportLocation(uuid: UUID): Location? {
-			return teleportMaps.remove(uuid)
+		fun from(player: Player): BGPlayer {
+			return BGPlayer(player.uniqueId, player.name, player, PlayerData.getOrCreate(player))
 		}
 	}
 
@@ -26,9 +35,7 @@ class BGPlayer(val uuid: UUID, val player: Player?) {
 		if (player != null) {
 			player.teleport(location)
 		} else {
-			teleportMaps[uuid] = location
+			playerData.teleportLocation = location
 		}
 	}
-
-
 }

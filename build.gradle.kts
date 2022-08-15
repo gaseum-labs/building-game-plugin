@@ -20,7 +20,7 @@ repositories {
 
 dependencies {
     implementation("co.aikar:acf-paper:0.5.1-SNAPSHOT")
-    compileOnly("io.papermc.paper:paper-api:1.19-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:1.19.2-R0.1-SNAPSHOT")
 }
 
 tasks {
@@ -32,7 +32,7 @@ tasks {
         kotlinOptions.apiVersion = "1.7"
     }
     runServer {
-        minecraftVersion("1.19")
+        minecraftVersion("1.19.2")
     }
 }
 

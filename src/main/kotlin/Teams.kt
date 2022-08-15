@@ -3,7 +3,6 @@ import net.kyori.adventure.text.format.NamedTextColor
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
-import org.bukkit.entity.Player
 import org.bukkit.scoreboard.Team
 
 object Teams {
@@ -16,7 +15,6 @@ object Teams {
 	fun initTeams() {
 		val scoreboard = Bukkit.getScoreboardManager().mainScoreboard
 
-		//TODO already in use exception
 		unreadyTeam = scoreboard.getTeam(UNREADY_TEAM_NAME)
 			?: scoreboard.registerNewTeam(UNREADY_TEAM_NAME)
 
@@ -28,22 +26,25 @@ object Teams {
 		readyTeam.color(NamedTextColor.GREEN)
 	}
 
-	fun updatePlayer(player: Player) {
-		val ready = GameRunner.ongoing?.currentRound()?.isPlayerReady(player.uniqueId)
-			?: PlayerData.get(player.uniqueId).participating
+	fun updatePlayer(bgPlayer: BGPlayer) {
+		val ready = GameRunner.ongoing?.currentRound()?.isPlayerReady(bgPlayer.uuid)
+			?: bgPlayer.playerData.participating
 
 		if (ready) {
-			unreadyTeam.removeEntry(player.name)
-			readyTeam.addEntry(player.name)
+			unreadyTeam.removeEntry(bgPlayer.name)
+			readyTeam.addEntry(bgPlayer.name)
 		} else {
-			readyTeam.removeEntry(player.name)
-			unreadyTeam.addEntry(player.name)
+			readyTeam.removeEntry(bgPlayer.name)
+			unreadyTeam.addEntry(bgPlayer.name)
 		}
 	}
 
-	fun resetPlayerStats(player: Player) {
-		player.inventory.clear()
-		player.gameMode = GameMode.CREATIVE
+	fun resetPlayerStats(bgPlayer: BGPlayer) {
+		val player = bgPlayer.player
+		if (player != null) {
+			player.inventory.clear()
+			player.gameMode = GameMode.CREATIVE
+		}
 	}
 
 	fun lobbyLocation(): Location {

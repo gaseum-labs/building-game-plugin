@@ -1,5 +1,6 @@
 package game
 
+import BGPlayer
 import BarManager
 import BuildingGamePlugin
 import PlayerData
@@ -38,7 +39,7 @@ object GameRunner {
 	fun startGame(type: GameType): String? {
 		if (ongoing != null) return "game is already running"
 
-		val gamePlayers = PlayerData.list.filter { (_, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
+		val gamePlayers = PlayerData.all().filter { (_, playerData) -> playerData.participating }.map { (uuid, _) -> uuid }
 
 		val requiredPlayers = if (pregameSetup.imposter) 4 else 2
 		if (gamePlayers.size < requiredPlayers) return "Need at least $requiredPlayers players to start"
@@ -51,9 +52,16 @@ object GameRunner {
 
 		ongoing = game
 
-		PlayerData.list.forEach { (_, playerData) -> playerData.participating = false }
+		PlayerData.all().forEach { (_, playerData) -> playerData.participating = false }
 
 		return null
+	}
+
+	fun stopGame() {
+		val game = ongoing ?: return
+		ongoing = null
+		game.gamePlayers.map(BGPlayer::getPlayer).forEach(Teams::updatePlayer)
+		PlayerData.cleanData()
 	}
 
 	fun checkRoundComplete() {
@@ -68,12 +76,7 @@ object GameRunner {
 
 		if (count == outOf || (timer != null && timer - 1 <= 0)) {
 			if (game.startNextRound() == null) {
-				/* end game */
-				ongoing = null
-
-				game.gamePlayers.mapNotNull { Bukkit.getPlayer(it) }.forEach { player ->
-					Teams.updatePlayer(player)
-				}
+				stopGame()
 			}
 		}
 	}
@@ -84,8 +87,7 @@ object GameRunner {
 
 		if (game == null) {
 			BarManager.newBossBar(player, Component.text("Building game"), 1.0f, BossBar.Color.WHITE)
-
-			val playerData = PlayerData.get(player.uniqueId)
+			val playerData = PlayerData.getOrCreate(player)
 
 			player.sendActionBar(
 				if (playerData.participating) {
@@ -112,7 +114,7 @@ object GameRunner {
 			).append(
 				Component.text(total, BLUE, BOLD)
 			).append(if (timer != null)
-				Component.text(" Time Remaining", AQUA).append(Component.text(Util.timeString(timer), WHITE, BOLD))
+				Component.text(" Time Remaining ", AQUA).append(Component.text(Util.timeString(timer), WHITE, BOLD))
 			 else
 				Component.empty()
 			)

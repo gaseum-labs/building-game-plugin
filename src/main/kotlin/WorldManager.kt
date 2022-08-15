@@ -14,6 +14,9 @@ object WorldManager {
 		world.setStorm(false)
 		world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false)
 		world.setGameRule(GameRule.DO_WEATHER_CYCLE, false)
+		world.setGameRule(GameRule.DO_MOB_SPAWNING, false)
+		world.setGameRule(GameRule.RANDOM_TICK_SPEED, 0)
+		world.setGameRule(GameRule.DO_FIRE_TICK, false)
 
 		gameWorld = world
 		return world

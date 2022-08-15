@@ -1,5 +1,6 @@
 package round.rounds
 
+import BGPlayer
 import game.Game
 import round.Room
 import round.RoomAccess
@@ -27,8 +28,7 @@ abstract class AbstractTextRound(game: Game, rooms: Array<Room>, index: Int) : R
 		if (!submittedPlayers.contains(uuid))submittedPlayers.add(uuid)
 		prompts[room.index] = whitespaceRemoved
 
-		val player = Bukkit.getPlayer(uuid)
-		if (player != null) Teams.updatePlayer(player)
+		Teams.updatePlayer(BGPlayer.getPlayer(uuid))
 
 		return true
 	}

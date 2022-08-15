@@ -4,7 +4,7 @@ import game.Game
 import round.rounds.*
 
 enum class RoundType(
-	val generateRooms: (x: Int, z: Int, r: Int, b: Int, h: Int, numPlayers: Int) -> Array<Room>?,
+	val generateRooms: (x: Int, z: Int, w: Int, d: Int, b: Int, h: Int, numPlayers: Int) -> Array<Room>?,
 	val create: (game: Game, rooms: Array<Room>, index: Int) -> Round
 ) {
 	ENTRY(Room.Companion::generateSmall, ::EntryRound),
